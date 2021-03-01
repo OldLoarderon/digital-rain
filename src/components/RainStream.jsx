@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useInterval from './useInterval'
+
 // Make sure we're using correct characters using RegEx and set up stream size
 const VALID_CHARS = `abcdefghijklmnopqrstuvwxyz0123456789$+-*/=%"'#&_(),.;:?!\\|{}<>[]^~`;
 
