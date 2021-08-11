@@ -1,12 +1,15 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-
 import { useState } from "react";
-import useInterval from './useInterval'
+import useInterval from "@use-it/interval";
 
-// Make sure we're using correct characters using RegEx and set up stream size
+// Constants:
+// Make sure we're using correct characters using RegEx and set up stream size:
 const VALID_CHARS = `abcdefghijklmnopqrstuvwxyz0123456789$+-*/=%"'#&_(),.;:?!\\|{}<>[]^~`;
 
-const MIN_STREAM_SIZE = 15;
+// Feature: random char flip probability on stream lifetime (probability for character to change every re-render):
+const STREAM_MUTATION_ODDS = 0.3;
+// determining stream size (will be at random)
+const MIN_STREAM_SIZE = 5;
 const MAX_STREAM_SIZE = 50;
 
 // Pick integer in the range
@@ -16,27 +19,47 @@ const getRandInRange = (min, max) =>
 const getRandChar = () =>
     VALID_CHARS.charAt(Math.floor(Math.random() * VALID_CHARS.length));
 
-// Random size Array filled with
+// Random size Array filled with random char
 const genRandStream = () =>
     new Array(getRandInRange(MIN_STREAM_SIZE, MAX_STREAM_SIZE)) // [empty, empty, empty]
     .fill() // [undefined, undefined, undefined]
-    .map(_ => getRandChar())
+    .map(_ => getRandChar());
 
+// sometimes I want the char to flip randomly, that's why I've iterated through whole stream, 
+// if the mutation odds hit the char will flip, otherwise just fill it with the current one.
+const getMutatedStream = stream => {
+    const newStream = [];
+    for (let i = 1; i < stream.length; i++) {
+        if(Math.random() < STREAM_MUTATION_ODDS) {
+            newStream.push(getRandChar());
+        } else {
+            newStream.push(stream[i])
+        }
+    }
+    newStream.push(getRandChar())
+    return newStream;
+}
+
+// main one stream function without interval delay
 const RainStream = props => {
-    const [topPadding, setTopPadding] = useState(0)
-    const stream = genRandStream();
+    const [stream, setStream] = useState(genRandStream())
+    const [topPadding, setTopPadding] = useState(stream.length * -50)
 
     useInterval(() => {
         if (topPadding > window.innerHeight){
-            setTopPadding(0)
+            setTopPadding(stream.length * -50)
         } else {
         setTopPadding(topPadding + 44)
+        // setStream(stream => [ ...stream.slice(1, stream.length), getRandChar()]) that's the old way of slicing and mutating stream
+        // setStream(stream => getMutatedStream(stream)); since that's a callback I can save some space and do this instead:
+        setStream(getMutatedStream);
         }
     }, 100)
 
     return(
    <div
     style={{
+        marginTop: topPadding,
         fontFamily: "matrixFont",
         color: "#20c20e",
         writingMode: "vertical-rl",
@@ -49,9 +72,9 @@ const RainStream = props => {
     {stream.map((char, index) => (
         <a
             style={{
-                // if the character is the last one, turn it white. If not, leave it be as it is.
+                // if the character is the last one, turn it white. Else leave it be.
                 color: index === stream.length - 1 ? '#fff' : undefined,
-                // first chars get more and more transparent
+                // last chars in stream get more and more transparent
                 opacity: index < 6 ? 0.1 + index * 0.15 : 1,
                 textShadow:
                     index === stream.length - 1
